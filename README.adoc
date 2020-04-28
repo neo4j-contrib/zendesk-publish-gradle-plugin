@@ -7,27 +7,40 @@ A plugin to publish articles to ZenDesk from an HTML file and a YAML file that c
 
 == Usage
 
-// TODO
+[source,gradle]
+----
+import com.neo4j.gradle.zendesk.ZenDeskUploadTask
+
+plugins {
+  id('com.neo4j.gradle.zendesk.ZenDeskPlugin')
+}
+
+zendesk {
+  email = 'user@company.com'
+  apiToken = 'abcd'
+  host = 'company.zendesk.com'
+  scheme = 'https'
+}
+
+task zenDeskUpload(type: ZenDeskUploadTask) {
+  source = "directory"
+  userSegmentId = 123
+  permissionGroupId = 456
+  sectionId = 789
+}
+----
 
 == Publish a new version
 
-[IMPORTANT]
-====
-You must configure `gradle.publish.key` and `gradle.publish.secret` to your `~/.gradle/gradle.properties` before publishing:
+The release process is automated and relies on GitHub Actions.
+Ae are using the :robot: `neo4j-oss-build` account to publish on https://plugins.gradle.org.
 
-.~/.gradle/gradle.properties
-[source,properties]
-----
-gradle.publish.key=
-gradle.publish.secret=
-----
-====
+The `GRADLE_PUBLISH_KEY` and `GRADLE_PUBLISH_SECRET` secrets are configured on GitHub.
+See the `.github/workflows/release.yml` file for details.
 
-1. Update the version in the `build.gradle.kts` file
-2. Tag and push to master:
+The release will be performed when a tag is pushed, the procedure is:
+
+. Update the version in the `build.gradle.kts` file and commit
+. Tag and push to `master` (don't forget the `v` prefix and replace `x.y.z` with an actual version):
 +
  $ git tag vx.y.z && git push origin master --tags
-
-3. Open a terminal and type:
-+
- $ ./gradlew publishPlugins
