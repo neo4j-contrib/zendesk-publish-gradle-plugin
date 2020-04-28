@@ -1,0 +1,33 @@
+= ZenDesk Publish Plugin for Gradle
+:important-caption: :heavy_exclamation_mark:
+
+image:https://github.com/neo4j-contrib/zendesk-publish-gradle-plugin/workflows/Build/badge.svg[Build status,link=https://github.com/neo4j-contrib/zendesk-publish-gradle-plugin/actions?query=workflow%3ABuild]
+
+A plugin to publish articles to ZenDesk from an HTML file and a YAML file that contains metadata.
+
+== Usage
+
+// TODO
+
+== Publish a new version
+
+[IMPORTANT]
+====
+You must configure `gradle.publish.key` and `gradle.publish.secret` to your `~/.gradle/gradle.properties` before publishing:
+
+.~/.gradle/gradle.properties
+[source,properties]
+----
+gradle.publish.key=
+gradle.publish.secret=
+----
+====
+
+1. Update the version in the `build.gradle.kts` file
+2. Tag and push to master:
++
+ $ git tag vx.y.z && git push origin master --tags
+
+3. Open a terminal and type:
++
+ $ ./gradlew publishPlugins
