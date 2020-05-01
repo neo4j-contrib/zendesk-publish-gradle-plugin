@@ -220,7 +220,7 @@ internal class ZenDeskUpload(val locale: String,
         existingArticlesBySlug[article.slug]
       }
       if (existingArticle != null) {
-        val articleId = existingArticle.int("id")!!
+        val articleId = existingArticle.long("id")!!
         val successful = updateArticle(articleId, article.slug, articleData, translationsData)
         if (successful) {
           logger.quiet("Successfully updated the article with id: $articleId and slug: ${article.slug}")
@@ -235,7 +235,7 @@ internal class ZenDeskUpload(val locale: String,
     return true
   }
 
-  private fun createArticle(articleSlug: String, data: Map<String, Any>): Int? {
+  private fun createArticle(articleSlug: String, data: Map<String, Any>): Long? {
     val articlesUrl = httpClient.baseUrlBuilder()
       .addPathSegment("help_center")
       .addPathSegment(locale)
@@ -244,7 +244,7 @@ internal class ZenDeskUpload(val locale: String,
       .addPathSegment("articles.json")
       .build()
     val articleId = httpClient.executeRequest(httpClient.buildPostRequest(articlesUrl, data)) { responseBody ->
-      (httpClient.parseJsonObject(responseBody)["article"] as JsonObject).int("id")
+      (httpClient.parseJsonObject(responseBody)["article"] as JsonObject).long("id")
     }
     if (articleId == null) {
       logger.error("Unable to create article with slug: $articleSlug")
@@ -253,7 +253,7 @@ internal class ZenDeskUpload(val locale: String,
     return articleId
   }
 
-  private fun updateArticle(articleId: Int, articleSlug: String, articleData: Map<String, Any>, translationsData: Map<String, Any>): Boolean {
+  private fun updateArticle(articleId: Long, articleSlug: String, articleData: Map<String, Any>, translationsData: Map<String, Any>): Boolean {
     val translationsUrl = httpClient.baseUrlBuilder()
       .addPathSegment("help_center")
       .addPathSegment("articles")
@@ -262,7 +262,7 @@ internal class ZenDeskUpload(val locale: String,
       .addPathSegment("$locale.json")
       .build()
     val updateTranslationsSuccessful = httpClient.executeRequest(httpClient.buildPutRequest(translationsUrl, translationsData)) { responseBody ->
-      (httpClient.parseJsonObject(responseBody)["translation"] as JsonObject).int("id") != null
+      (httpClient.parseJsonObject(responseBody)["translation"] as JsonObject).long("id") != null
     } ?: false
     if (!updateTranslationsSuccessful) {
       logger.error("Unable to update translations for the article with id: $articleId and slug: $articleSlug")
@@ -275,7 +275,7 @@ internal class ZenDeskUpload(val locale: String,
       .addPathSegment("$articleId.json")
       .build()
     val updateArticleSuccessful = httpClient.executeRequest(httpClient.buildPutRequest(articleUrl, mapOf("article" to articleData))) { responseBody ->
-      (httpClient.parseJsonObject(responseBody)["article"] as JsonObject).int("id") != null
+      (httpClient.parseJsonObject(responseBody)["article"] as JsonObject).long("id") != null
     } ?: false
     if (!updateArticleSuccessful) {
       logger.error("Unable to update the article with id: $articleId and slug: $articleSlug")
