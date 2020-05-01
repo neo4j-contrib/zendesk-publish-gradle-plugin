@@ -73,13 +73,13 @@ abstract class ZenDeskUploadTask : DefaultTask() {
   var apiToken: String = ""
 
   @Input
-  val userSegmentId: Property<Long> = project.objects.property()
+  val userSegmentId: Property<Number> = project.objects.property()
 
   @Input
-  val permissionGroupId: Property<Long> = project.objects.property()
+  val permissionGroupId: Property<Number> = project.objects.property()
 
   @Input
-  val sectionId: Property<Long> = project.objects.property()
+  val sectionId: Property<Number> = project.objects.property()
 
   @Input
   var locale: String = "en-us"
@@ -97,9 +97,9 @@ abstract class ZenDeskUploadTask : DefaultTask() {
     }
     val zenDeskUpload = ZenDeskUpload(
       locale = locale,
-      userSegmentId = userSegmentId.get(),
-      permissionGroupId = permissionGroupId.get(),
-      sectionId = sectionId.get(),
+      userSegmentId = userSegmentId.get().toLong(),
+      permissionGroupId = permissionGroupId.get().toLong(),
+      sectionId = sectionId.get().toLong(),
       sources = sources,
       connectionInfo = zenDeskConnectionInfo(),
       logger = logger

@@ -45,9 +45,9 @@ zendesk {
 
 task zenDeskUpload(type: ZenDeskUploadTask) {
   source = "empty"
-  userSegmentId = 123
+  userSegmentId = 1
   permissionGroupId = 456
-  sectionId = 789
+  sectionId = 360001234567
 }
 """)
 
