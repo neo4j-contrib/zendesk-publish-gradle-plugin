@@ -226,7 +226,7 @@ internal class ZenDeskUpload(val locale: String,
           logger.quiet("Successfully updated the article with id: $articleId and slug: ${article.slug}")
         }
       } else {
-        val articleId = createArticle(article.slug, articleData.plus(translationsData))
+        val articleId = createArticle(article.slug, mapOf("article" to articleData.plus(translationsData)))
         if (articleId != null) {
           logger.quiet("Successfully created a new article with id: $articleId and slug: ${article.slug}")
         }
