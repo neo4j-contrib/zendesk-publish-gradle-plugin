@@ -116,15 +116,17 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
       runner.withProjectDir(workspaceDir)
       val result = runner.build()
 
-      val labelNames = postJson.array<JsonObject>("label_names")
+      val article = postJson.obj("article")
+      assertNotNull(article)
+      val labelNames = article.array<JsonObject>("label_names")
       assertNotNull(labelNames)
       assertEquals(labelNames.value.size, 0)
-      assertEquals(postJson["position"] as Int, 1000000) // default value
-      assertEquals(postJson["promoted"] as Boolean, false) // default value
-      assertEquals(postJson["user_segment_id"] as Int, 123)
-      assertEquals(postJson["permission_group_id"] as Int, 456)
-      assertEquals(postJson["title"] as String, "Introduction to Neo4j 4.0")
-      assertEquals(postJson["body"] as String, """<section>
+      assertEquals(article["position"] as Int, 1000000) // default value
+      assertEquals(article["promoted"] as Boolean, false) // default value
+      assertEquals(article["user_segment_id"] as Int, 123)
+      assertEquals(article["permission_group_id"] as Int, 456)
+      assertEquals(article["title"] as String, "Introduction to Neo4j 4.0")
+      assertEquals(article["body"] as String, """<section>
   <h2>Introduction to Neo4j 4.0</h2>
 </section>
 <!-- METADATA! {"slug":"00-intro-neo4j-about"} !METADATA -->""")
