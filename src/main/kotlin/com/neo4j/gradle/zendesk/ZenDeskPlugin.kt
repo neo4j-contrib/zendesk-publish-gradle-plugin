@@ -43,7 +43,7 @@ open class ZenDeskPlugin : Plugin<Project> {
 data class Author(val name: String, val firstName: String, val lastName: String, val email: String)
 
 data class ArticleAttributes(val slug: String,
-                             val id: Int?,
+                             val id: Long?,
                              val title: String,
                              val author: Author?,
                              val tags: List<String>,
@@ -73,13 +73,13 @@ abstract class ZenDeskUploadTask : DefaultTask() {
   var apiToken: String = ""
 
   @Input
-  val userSegmentId: Property<Int> = project.objects.property()
+  val userSegmentId: Property<Long> = project.objects.property()
 
   @Input
-  val permissionGroupId: Property<Int> = project.objects.property()
+  val permissionGroupId: Property<Long> = project.objects.property()
 
   @Input
-  val sectionId: Property<Int> = project.objects.property()
+  val sectionId: Property<Long> = project.objects.property()
 
   @Input
   var locale: String = "en-us"
@@ -162,9 +162,9 @@ data class ZenDeskConnectionInfo(val scheme: String,
                                  val readTimeout: Duration = Duration.ofSeconds(30))
 
 internal class ZenDeskUpload(val locale: String,
-                             val userSegmentId: Int,
-                             val permissionGroupId: Int,
-                             val sectionId: Int,
+                             val userSegmentId: Long,
+                             val permissionGroupId: Long,
+                             val sectionId: Long,
                              val sources: MutableList<ConfigurableFileTree>,
                              val connectionInfo: ZenDeskConnectionInfo,
                              val logger: Logger) {
@@ -182,7 +182,7 @@ internal class ZenDeskUpload(val locale: String,
     }
     val existingArticles = allArticles()
     val existingArticlesById = existingArticles.mapNotNull {
-      val id = it.int("id")
+      val id = it.long("id")
       if (id != null) {
         id to it
       } else {
@@ -425,10 +425,10 @@ internal class ZenDeskUpload(val locale: String,
     return getMandatoryString(attributes, "slug", yamlFilePath, fileName)
   }
 
-  private fun getId(attributes: Map<*, *>): Int? {
+  private fun getId(attributes: Map<*, *>): Long? {
     val value = attributes["zendesk_id"]
-    if (value is Int) {
-      return value
+    if (value is Number) {
+      return value.toLong()
     }
     return null
   }
