@@ -426,8 +426,11 @@ internal class ZenDeskUpload(val locale: String,
   private fun getAuthor(attributes: Map<*, *>): Author? {
     val author = attributes["author"]
     if (author is Map<*, *>) {
-      val tags = author["tags"] as List<String>? ?: emptyList()
-      return Author(author["name"] as String, author["first_name"] as String, author["last_name"] as String, author["email"] as String?, tags)
+      val tagsValue = author["tags"]
+      val tags = if (tagsValue is List<*>) tagsValue.filterIsInstance<String>() else emptyList()
+      val emailValue = author["email"]
+      val email = if (emailValue is String) emailValue else null
+      return Author(author["name"] as String, author["first_name"] as String, author["last_name"] as String, email, tags)
     }
     return null
   }
