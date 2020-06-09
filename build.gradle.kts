@@ -25,7 +25,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.11.1")
 }
 
-version = "0.1.2"
+version = "0.1.3"
 
 gradlePlugin {
     plugins {
