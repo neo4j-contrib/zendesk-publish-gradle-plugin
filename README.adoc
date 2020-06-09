@@ -2,6 +2,7 @@
 :important-caption: :heavy_exclamation_mark:
 
 image:https://github.com/neo4j-contrib/zendesk-publish-gradle-plugin/workflows/Build/badge.svg[Build status,link=https://github.com/neo4j-contrib/zendesk-publish-gradle-plugin/actions?query=workflow%3ABuild]
+image:https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fplugins.gradle.org%2Fm2%2Fcom.neo4j.gradle.zendesk.ZenDeskPlugin%2Fcom.neo4j.gradle.zendesk.ZenDeskPlugin.gradle.plugin%2Fmaven-metadata.xml[Gradle Plugin,link=https://plugins.gradle.org/plugin/com.neo4j.gradle.zendesk.ZenDeskPlugin]
 
 A plugin to publish articles to ZenDesk from an HTML file and a YAML file that contains metadata.
 
