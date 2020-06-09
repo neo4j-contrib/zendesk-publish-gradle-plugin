@@ -8,14 +8,23 @@ import org.gradle.api.logging.Logger
 class ZenDeskUsers(private val zenDeskHttpClient: ZenDeskHttpClient, private val logger: Logger) {
 
   /**
-   * Find a user from an email.
-   * This method is currently not used!
-   * It can be used to find an user from the "author.email" property defines in the metadata (YAML) file.
+   * Find a user from an author.
    */
-  fun findUser(email: String): ZenDeskUser? {
+  fun findUser(author: Author): ZenDeskUser? {
+    val query = if (author.email != null) {
+      "type:user email:${author.email}"
+    } else {
+      val baseQuery = "type:user name:${author.name}"
+      val tagsFilter = author.tags.joinToString(" ") { "tags: $it" }
+      if (tagsFilter.isNotBlank()) {
+        "$baseQuery $tagsFilter"
+      } else {
+        baseQuery
+      }
+    }
     val url = zenDeskHttpClient.baseUrlBuilder()
       .addPathSegment("search.json")
-      .addQueryParameter("query", "type:user email:$email")
+      .addQueryParameter("query", query)
       .build()
     return zenDeskHttpClient.executeRequest(zenDeskHttpClient.buildGetRequest(url)) { responseBody ->
       try {
@@ -26,7 +35,7 @@ class ZenDeskUsers(private val zenDeskHttpClient: ZenDeskHttpClient, private val
           if (list.isNotEmpty()) {
             val user = list.first()
             if (user is JsonObject) {
-              ZenDeskUser(user["id"] as Int, user["name"] as String)
+              ZenDeskUser((user["id"] as Number).toLong(), user["name"] as String)
             } else {
               null
             }
@@ -44,4 +53,4 @@ class ZenDeskUsers(private val zenDeskHttpClient: ZenDeskHttpClient, private val
   }
 }
 
-data class ZenDeskUser(val id: Int, val name: String)
+data class ZenDeskUser(val id: Long, val name: String)
