@@ -40,7 +40,7 @@ open class ZenDeskPlugin : Plugin<Project> {
   }
 }
 
-data class Author(val name: String, val firstName: String, val lastName: String, val email: String)
+data class Author(val name: String, val firstName: String, val lastName: String, val email: String?, val tags: List<String>)
 
 data class ArticleAttributes(val slug: String,
                              val id: Long?,
@@ -175,6 +175,8 @@ internal class ZenDeskUpload(val locale: String,
   private val htmlMetadataRegex = Regex("<!-- METADATA! (?<json>.*) !METADATA -->\$")
 
   fun publish(): Boolean {
+    val zenDeskUsersService = ZenDeskUsers(httpClient, logger)
+    val zendeskUsersCache = mutableMapOf<String, ZenDeskUser?>()
     val articlesWithAttributes = getArticlesWithAttributes()
     if (articlesWithAttributes.isEmpty()) {
       logger.info("No article to upload")
@@ -208,6 +210,18 @@ internal class ZenDeskUpload(val locale: String,
         "position" to article.position,
         "promoted" to article.promoted
       )
+      val author = article.author
+      if (author != null) {
+        val authorKey = author.email ?: author.name
+        val zendeskAuthor = if (zendeskUsersCache.containsKey(authorKey)) {
+          zendeskUsersCache[authorKey]
+        } else {
+          zendeskUsersCache.put(authorKey, zenDeskUsersService.findUser(author))
+        }
+        if (zendeskAuthor != null) {
+          articleData["author_id"] = zendeskAuthor.id
+        }
+      }
       val translationsData = mutableMapOf(
         "title" to article.title,
         "body" to appendMetadataToHTML(article.content, JsonObject(mapOf("slug" to article.slug))),
@@ -412,7 +426,8 @@ internal class ZenDeskUpload(val locale: String,
   private fun getAuthor(attributes: Map<*, *>): Author? {
     val author = attributes["author"]
     if (author is Map<*, *>) {
-      return Author(author["name"] as String, author["first_name"] as String, author["last_name"] as String, author["email"] as String)
+      val tags = author["tags"] as List<String>? ?: emptyList()
+      return Author(author["name"] as String, author["first_name"] as String, author["last_name"] as String, author["email"] as String?, tags)
     }
     return null
   }
