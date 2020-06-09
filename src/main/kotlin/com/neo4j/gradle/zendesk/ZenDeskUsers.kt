@@ -18,13 +18,14 @@ class ZenDeskUsers(private val zenDeskHttpClient: ZenDeskHttpClient, private val
       "type:user email:${author.email}"
     } else {
       val baseQuery = "type:user name:${author.name}"
-      val tagsFilter = author.tags.joinToString(" ") { "tags: $it" }
+      val tagsFilter = author.tags.joinToString(" ") { "tags:$it" }
       if (tagsFilter.isNotBlank()) {
         "$baseQuery $tagsFilter"
       } else {
         baseQuery
       }
     }
+    logger.info("Finding Zendesk user using query: $query")
     val url = zenDeskHttpClient.baseUrlBuilder()
       .addPathSegment("search.json")
       .addQueryParameter("query", query)
@@ -38,7 +39,9 @@ class ZenDeskUsers(private val zenDeskHttpClient: ZenDeskHttpClient, private val
           if (list.isNotEmpty()) {
             val user = list.first()
             if (user is JsonObject) {
-              ZenDeskUser((user["id"] as Number).toLong(), user["name"] as String)
+              val zendeskUser = ZenDeskUser((user["id"] as Number).toLong(), user["name"] as String)
+              logger.info("Found $zendeskUser for author: $author")
+              zendeskUser
             } else {
               null
             }
