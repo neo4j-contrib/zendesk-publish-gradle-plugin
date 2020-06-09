@@ -22,6 +22,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.5.0")
+    testImplementation("org.assertj:assertj-core:3.11.1")
 }
 
 version = "0.1.0"

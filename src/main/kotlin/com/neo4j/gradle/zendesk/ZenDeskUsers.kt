@@ -11,6 +11,9 @@ class ZenDeskUsers(private val zenDeskHttpClient: ZenDeskHttpClient, private val
    * Find a user from an author.
    */
   fun findUser(author: Author): ZenDeskUser? {
+    if (author.email == null && author.name == null) {
+      return null
+    }
     val query = if (author.email != null) {
       "type:user email:${author.email}"
     } else {
