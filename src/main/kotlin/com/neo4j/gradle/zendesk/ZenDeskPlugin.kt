@@ -205,14 +205,16 @@ internal class ZenDeskUpload(val locale: String,
           val zendeskAuthor = if (zendeskUsersCache.containsKey(authorKey)) {
             zendeskUsersCache[authorKey]
           } else {
-            zendeskUsersCache.put(authorKey, zenDeskUsersService.findUser(author))
+            val zendeskUser = zenDeskUsersService.findUser(author)
+            zendeskUsersCache[authorKey] = zendeskUser
+            zendeskUser
           }
           if (zendeskAuthor != null) {
             articleData["author_id"] = zendeskAuthor.id
           }
         }
       }
-      val translationsData = mutableMapOf(
+      val translationsData = mapOf(
         "title" to article.title,
         "body" to appendMetadataToHTML(article.content, JsonObject(mapOf("slug" to article.slug))),
         "user_segment_id" to userSegmentId,
@@ -225,11 +227,13 @@ internal class ZenDeskUpload(val locale: String,
       }
       if (existingArticle != null) {
         val articleId = existingArticle.long("id")!!
+        logger.info("Updating article id: $articleId and slug: ${article.slug} with article: $articleData and translations: ${translationsData.filterKeys { it != "body" }}")
         val successful = updateArticle(articleId, article.slug, articleData, translationsData)
         if (successful) {
           logger.quiet("Successfully updated the article with id: $articleId and slug: ${article.slug}")
         }
       } else {
+        logger.info("Creating a new article for slug: ${article.slug} with article: $articleData and translations: ${translationsData.filterKeys { it != "body" }}")
         val articleId = createArticle(article.slug, mapOf("article" to articleData.plus(translationsData)))
         if (articleId != null) {
           logger.quiet("Successfully created a new article with id: $articleId and slug: ${article.slug}")
