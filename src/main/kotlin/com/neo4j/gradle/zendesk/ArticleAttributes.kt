@@ -37,7 +37,14 @@ class ArticleAttributesReader(val logger: Logger) {
           logger.warn("Missing YAML file: $yamlFileAbsolutePath, unable to publish $fileName to ZenDesk")
           null
         } else {
-          fromFile(yamlFile, file)
+          try {
+            fromFile(yamlFile, file)
+          } catch (e: Exception) {
+            val yamlFileAbsolutePath = yamlFile.absolutePath
+            val fileName = file.name
+            logger.warn("Error while parsing the YAML file: $yamlFileAbsolutePath, unable to publish $fileName to ZenDesk", e)
+            null
+          }
         }
       }
   }
@@ -63,9 +70,9 @@ class ArticleAttributesReader(val logger: Logger) {
       val position = getPosition(attributes) ?: 1000000
       val promoted = getPromoted(attributes) ?: false
       ArticleAttributes(slug, id, title, author, tags, position, promoted, content)
-      } else {
+    } else {
       null
-      }
+    }
   }
 
   private fun getMandatoryString(attributes: Map<*, *>, name: String, yamlFilePath: String, fileName: String): String? {
