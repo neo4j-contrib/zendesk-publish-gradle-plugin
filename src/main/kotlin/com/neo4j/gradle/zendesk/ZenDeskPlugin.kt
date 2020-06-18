@@ -161,6 +161,7 @@ internal class ZenDeskUpload(val locale: String,
   private val klaxon = Klaxon()
   private val httpClient = ZenDeskHttpClient(connectionInfo, logger)
   private val htmlMetadataRegex = Regex("<!-- METADATA! (?<json>.*) !METADATA -->\$")
+  private val md5Digest = MessageDigest.getInstance("MD5")
 
   fun publish(): Boolean {
     val zenDeskUsersService = ZenDeskUsers(httpClient, logger)
@@ -316,8 +317,7 @@ internal class ZenDeskUpload(val locale: String,
       "user_segment_id" to userSegmentId,
       "permission_group_id" to permissionGroupId
     ))
-    return MessageDigest
-      .getInstance("MD5")
+    return md5Digest
       .digest(data.toByteArray())
       .fold("", { str, it -> str + "%02x".format(it) })
   }
