@@ -19,6 +19,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.property
 import java.io.StringReader
+import java.security.MessageDigest
 import java.time.Duration
 
 
@@ -157,7 +158,7 @@ internal class ZenDeskUpload(val locale: String,
                              val connectionInfo: ZenDeskConnectionInfo,
                              val logger: Logger) {
 
-  private val parser = Klaxon()
+  private val klaxon = Klaxon()
   private val httpClient = ZenDeskHttpClient(connectionInfo, logger)
   private val htmlMetadataRegex = Regex("<!-- METADATA! (?<json>.*) !METADATA -->\$")
 
@@ -180,14 +181,9 @@ internal class ZenDeskUpload(val locale: String,
       }
     }.toMap()
     val existingArticlesBySlug = existingArticles.mapNotNull {
-      val metadata = getMetadataFromHTML(it.string("body").orEmpty())
-      if (metadata != null) {
-        val slug = metadata.string("slug")
-        if (slug != null) {
-          slug to it
-        } else {
-          null
-        }
+      val slug = getMetadataSlugFromHTML(it)
+      if (slug != null) {
+        slug to it
       } else {
         null
       }
@@ -214,9 +210,10 @@ internal class ZenDeskUpload(val locale: String,
           }
         }
       }
+      val digest = computeDigest(articleData, article)
       val translationsData = mapOf(
         "title" to article.title,
-        "body" to appendMetadataToHTML(article.content, JsonObject(mapOf("slug" to article.slug))),
+        "body" to appendMetadataToHTML(article.content, JsonObject(mapOf("slug" to article.slug, "digest" to digest))),
         "user_segment_id" to userSegmentId,
         "permission_group_id" to permissionGroupId
       )
@@ -226,11 +223,16 @@ internal class ZenDeskUpload(val locale: String,
         existingArticlesBySlug[article.slug]
       }
       if (existingArticle != null) {
+        val currentDigest = getMetadataDigestFromHTML(existingArticle)
         val articleId = existingArticle.long("id")!!
-        logger.info("Updating article id: $articleId and slug: ${article.slug} with article: $articleData and translations: ${translationsData.filterKeys { it != "body" }}")
-        val successful = updateArticle(articleId, article.slug, articleData, translationsData)
-        if (successful) {
-          logger.quiet("Successfully updated the article with id: $articleId and slug: ${article.slug}")
+        if (currentDigest == digest) {
+          logger.quiet("Skipping article with id: $articleId and slug: ${article.slug}, content has not changed")
+        } else {
+          logger.info("Updating article id: $articleId and slug: ${article.slug} with article: $articleData and translations: ${translationsData.filterKeys { it != "body" }}")
+          val successful = updateArticle(articleId, article.slug, articleData, translationsData)
+          if (successful) {
+            logger.quiet("Successfully updated the article with id: $articleId and slug: ${article.slug}")
+          }
         }
       } else {
         logger.info("Creating a new article for slug: ${article.slug} with article: $articleData and translations: ${translationsData.filterKeys { it != "body" }}")
@@ -297,12 +299,35 @@ internal class ZenDeskUpload(val locale: String,
 <!-- METADATA! ${metadata.toJsonString()} !METADATA -->"""
   }
 
+  private fun getMetadataSlugFromHTML(existingArticle: JsonObject): String? {
+    val metadata = getMetadataFromHTML(existingArticle.string("body").orEmpty())
+    return metadata?.string("slug")
+  }
+
+  private fun getMetadataDigestFromHTML(existingArticle: JsonObject): String? {
+    val metadata = getMetadataFromHTML(existingArticle.string("body").orEmpty())
+    return metadata?.string("digest")
+  }
+
+  private fun computeDigest(articleData: MutableMap<String, Any>, article: ArticleAttributes): String {
+    val data = klaxon.toJsonString(articleData + mapOf(
+      "title" to article.title,
+      "content" to article.content,
+      "user_segment_id" to userSegmentId,
+      "permission_group_id" to permissionGroupId
+    ))
+    return MessageDigest
+      .getInstance("MD5")
+      .digest(data.toByteArray())
+      .fold("", { str, it -> str + "%02x".format(it) })
+  }
+
   private fun getMetadataFromHTML(html: String): JsonObject? {
     val find = htmlMetadataRegex.find(html)
     val jsonMatchGroup = find?.groups?.get("json")
     if (jsonMatchGroup != null) {
       val json = jsonMatchGroup.value
-      return parser.parseJsonObject(StringReader(json))
+      return klaxon.parseJsonObject(StringReader(json))
     }
     return null
   }

@@ -2,15 +2,11 @@ package com.neo4j.gradle.zendesk
 
 import com.beust.klaxon.JsonObject
 import com.beust.klaxon.Klaxon
-import okhttp3.mockwebserver.Dispatcher
-import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.yaml.snakeyaml.Yaml
 import java.io.File
-import java.io.StringReader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -65,37 +61,11 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
 
   @Test
   fun `should create a new article`() {
-    var postJson = JsonObject()
     // Setup mock server to simulate ZenDesk
-    val dispatch = { request: RecordedRequest ->
-      when (request.method) {
-        "POST" -> {
-          when (request.path) {
-            "/api/v2/help_center/en-us/sections/789/articles.json" -> {
-              postJson = klaxon.parseJsonObject(StringReader(request.body.readUtf8()))
-              MockResponse()
-                .setHeader("Content-Type", "application/json")
-                .setBody("""{"article": { "id": 1 } }""")
-                .setResponseCode(201)
-            }
-            else -> MockResponse().setResponseCode(404)
-          }
-        }
-        "GET" -> {
-          when (request.path) {
-            "/api/v2/help_center/en-us/sections/789/articles.json" -> {
-              MockResponse()
-                .setHeader("Content-Type", "application/json")
-                .setBody("""{"articles": [], "count": 0, "page": 1 }""")
-                .setResponseCode(200)
-            }
-            else -> MockResponse().setResponseCode(404)
-          }
-        }
-        else -> MockResponse().setResponseCode(404)
-      }
-    }
-    withServer(dispatch) { server ->
+    val zenDeskMockServer = ZenDeskMockServer()
+    val server = zenDeskMockServer.setup()
+    try {
+      server.start()
       val testFiles = listOf(FileWithMetadata(
         fileNameWithoutExtension = "test",
         fileContent = """<section>
@@ -116,6 +86,8 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
       runner.withProjectDir(workspaceDir)
       val result = runner.build()
 
+      assertEquals(zenDeskMockServer.dataReceived.size, 1)
+      val postJson = zenDeskMockServer.dataReceived.first()
       val article = postJson.obj("article")
       assertNotNull(article)
       val labelNames = article.array<JsonObject>("label_names")
@@ -129,53 +101,21 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
       assertEquals(article["body"] as String, """<section>
   <h2>Introduction to Neo4j 4.0</h2>
 </section>
-<!-- METADATA! {"slug":"00-intro-neo4j-about"} !METADATA -->""")
+<!-- METADATA! {"slug":"00-intro-neo4j-about","digest":"d2987a9f064fa2a1416adc87a3c1c6f1"} !METADATA -->""")
       val task = result.task(":zenDeskUpload")
       assertEquals(TaskOutcome.SUCCESS, task?.outcome)
+    } finally {
+      server.shutdown()
     }
   }
 
   @Test
   fun `should update an existing article by id`() {
-    val articleJson = readText("/neo4j-3-5-4-released-article-99.json")
-    var putArticleJson = JsonObject()
-    var putTranslationJson = JsonObject()
-    val dispatch = { request: RecordedRequest ->
-      when (request.method) {
-        "PUT" -> {
-          when (request.path) {
-            "/api/v2/help_center/articles/99/translations/en-us.json" -> {
-              putTranslationJson = klaxon.parseJsonObject(StringReader(request.body.readUtf8()))
-              MockResponse()
-                .setHeader("Content-Type", "application/json")
-                .setBody("""{"translation": { "id": 501 } }""")
-                .setResponseCode(200)
-            }
-            "/api/v2/help_center/en-us/articles/99.json" -> {
-              putArticleJson = klaxon.parseJsonObject(StringReader(request.body.readUtf8()))
-              MockResponse()
-                .setHeader("Content-Type", "application/json")
-                .setBody("""{"article": { "id": 99 } }""")
-                .setResponseCode(200)
-            }
-            else -> MockResponse().setResponseCode(404)
-          }
-        }
-        "GET" -> {
-          when (request.path) {
-            "/api/v2/help_center/en-us/sections/789/articles.json" -> {
-              MockResponse()
-                .setHeader("Content-Type", "application/json")
-                .setBody("""{"articles": [$articleJson], "count": 1, "page": 1 }""")
-                .setResponseCode(200)
-            }
-            else -> MockResponse().setResponseCode(404)
-          }
-        }
-        else -> MockResponse().setResponseCode(404)
-      }
-    }
-    withServer(dispatch) { server ->
+    // Setup mock server to simulate ZenDesk
+    val zenDeskMockServer = ZenDeskMockServer()
+    val server = zenDeskMockServer.setup()
+    try {
+      server.start()
       val testFiles = listOf(FileWithMetadata(
         fileNameWithoutExtension = "test",
         fileContent = """<section>
@@ -198,14 +138,18 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
       runner.withProjectDir(workspaceDir)
       val result = runner.build()
 
+      assertEquals(zenDeskMockServer.dataReceived.size, 2)
+      val putTranslationJson = zenDeskMockServer.dataReceived[0]
+
       assertEquals(putTranslationJson.string("title"), "Neo4j 3.5.4 Patch Released ( April 6, 2019 )")
       assertEquals(putTranslationJson.string("body"), """<section>
   <h2>Neo4j 3.5.4 Patch Released ( April 6, 2019 )</h2>
 </section>
-<!-- METADATA! {"slug":"neo4j-3-5-4-patch-released"} !METADATA -->""")
+<!-- METADATA! {"slug":"neo4j-3-5-4-patch-released","digest":"2d310dc2b66f0e7dcd87dbd36591e33a"} !METADATA -->""")
       assertEquals(putTranslationJson.int("user_segment_id"), 123)
       assertEquals(putTranslationJson.int("permission_group_id"), 456)
 
+      val putArticleJson = zenDeskMockServer.dataReceived[1]
       val article = putArticleJson["article"] as JsonObject
       assertEquals(article.array<String>("label_names").orEmpty().first(), "release")
       assertEquals(article.int("position"), 1000000)
@@ -213,6 +157,42 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
 
       val task = result.task(":zenDeskUpload")
       assertEquals(TaskOutcome.SUCCESS, task?.outcome)
+    } finally {
+      server.shutdown()
+    }
+  }
+
+  @Test
+  fun `should not update an existing article when content has not changed`() {
+    // Setup mock server to simulate ZenDesk
+    val zenDeskMockServer = ZenDeskMockServer()
+    val server = zenDeskMockServer.setup()
+    try {
+      server.start()
+      val testFiles = listOf(FileWithMetadata(
+        fileNameWithoutExtension = "test",
+        fileContent = "<p>If the opportunity arises such that you are in need of replicating your existing Causal Cluster cluster to a new hardware setup, the following can be used to allow for minimal downtime.</p>",
+        metadataContent = yaml.dump(mapOf(
+          "slug" to "a-method-to-replicate-a-causal-cluster-to-new-hardware-with-minimum-downtime",
+          "title" to "A method to replicate a Causal Cluster to new hardware with minimum downtime",
+          "zendesk_id" to 115015697128
+        ))
+      ))
+      val workspaceDir = setupWorkspace(Workspace("content-no-change", basicZenDeskUploadBuildGradle("content-no-change", server)), testFiles)
+
+      // Run the build
+      val runner = GradleRunner.create()
+      runner.forwardOutput()
+      runner.withPluginClasspath()
+      runner.withArguments(":zenDeskUpload")
+      runner.withProjectDir(workspaceDir)
+      val result = runner.build()
+
+      assertEquals(zenDeskMockServer.dataReceived.size, 0)
+      val task = result.task(":zenDeskUpload")
+      assertEquals(TaskOutcome.SUCCESS, task?.outcome)
+    } finally {
+      server.shutdown()
     }
   }
 
@@ -252,23 +232,6 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
     workspaceDir.resolve("settings.gradle").writeText("")
     workspaceDir.resolve("build.gradle").writeText(workspace.buildGradleContent)
     return workspaceDir
-  }
-
-  private fun withServer(dispatch: (RecordedRequest) -> MockResponse, test: (MockWebServer) -> Unit) {
-    val server = MockWebServer()
-    val dispatcher: Dispatcher = object : Dispatcher() {
-      @Throws(InterruptedException::class)
-      override fun dispatch(request: RecordedRequest): MockResponse {
-        return dispatch(request)
-      }
-    }
-    server.dispatcher = dispatcher
-    try {
-      server.start()
-      test(server)
-    } finally {
-      server.shutdown()
-    }
   }
 
   private fun readText(fileName: String): String {
