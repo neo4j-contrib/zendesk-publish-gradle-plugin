@@ -14,7 +14,6 @@ import kotlin.test.assertNotNull
 
 class ZenDeskPluginFunctionalTest {
 
-  private val klaxon = Klaxon()
   private val yaml = Yaml()
 
   @Test
@@ -232,10 +231,6 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
     workspaceDir.resolve("settings.gradle").writeText("")
     workspaceDir.resolve("build.gradle").writeText(workspace.buildGradleContent)
     return workspaceDir
-  }
-
-  private fun readText(fileName: String): String {
-    return ZenDeskPluginFunctionalTest::class.java.getResourceAsStream(fileName).reader().readText()
   }
 
   data class FileWithMetadata(val fileNameWithoutExtension: String, val fileContent: String, val metadataContent: String)
