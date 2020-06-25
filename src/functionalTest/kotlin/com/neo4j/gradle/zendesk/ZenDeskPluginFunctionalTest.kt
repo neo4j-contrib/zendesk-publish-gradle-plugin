@@ -256,7 +256,7 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
   userSegmentId = 123
   permissionGroupId = 456
   sectionId = 789
-  notifySubscribers = ${notifySubscribers}
+  notifySubscribers = $notifySubscribers
 }"""
   }
 
