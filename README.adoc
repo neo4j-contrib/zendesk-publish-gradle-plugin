@@ -28,6 +28,8 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
   userSegmentId = 123
   permissionGroupId = 456
   sectionId = 789
+  // Notify subscribers when creating a new article (default: true) 
+  notifySubscribers = true
 }
 ----
 
