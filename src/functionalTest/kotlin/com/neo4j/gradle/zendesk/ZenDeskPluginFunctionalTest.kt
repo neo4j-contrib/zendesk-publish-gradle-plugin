@@ -88,6 +88,7 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
       assertEquals(zenDeskMockServer.dataReceived.size, 1)
       val postJson = zenDeskMockServer.dataReceived.first()
       val article = postJson.obj("article")
+      assertEquals(postJson.boolean("notify_subscribers"), true)
       assertNotNull(article)
       val labelNames = article.array<JsonObject>("label_names")
       assertNotNull(labelNames)
@@ -101,6 +102,46 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
   <h2>Introduction to Neo4j 4.0</h2>
 </section>
 <!-- METADATA! {"slug":"00-intro-neo4j-about","digest":"d2987a9f064fa2a1416adc87a3c1c6f1"} !METADATA -->""")
+      val task = result.task(":zenDeskUpload")
+      assertEquals(TaskOutcome.SUCCESS, task?.outcome)
+    } finally {
+      server.shutdown()
+    }
+  }
+
+  @Test
+  fun `should create a new article (notification disabled)`() {
+    // Setup mock server to simulate ZenDesk
+    val zenDeskMockServer = ZenDeskMockServer()
+    val server = zenDeskMockServer.setup()
+    try {
+      server.start()
+      val testFiles = listOf(FileWithMetadata(
+        fileNameWithoutExtension = "test",
+        fileContent = """<section>
+  <h2>Introduction to Neo4j 4.1</h2>
+</section>""",
+        metadataContent = yaml.dump(mapOf(
+          "slug" to "00-intro-neo4j-4-1",
+          "title" to "Introduction to Neo4j 4.1"
+        ))
+      ))
+      val workspaceDir = setupWorkspace(Workspace("html", basicZenDeskUploadBuildGradle("html", server, notifySubscribers = false)), testFiles)
+
+      // Run the build
+      val runner = GradleRunner.create()
+      runner.forwardOutput()
+      runner.withPluginClasspath()
+      runner.withArguments(":zenDeskUpload")
+      runner.withProjectDir(workspaceDir)
+      val result = runner.build()
+
+      assertEquals(zenDeskMockServer.dataReceived.size, 1)
+      val postJson = zenDeskMockServer.dataReceived.first()
+      val article = postJson.obj("article")
+      assertNotNull(article)
+      assertEquals(article["title"] as String, "Introduction to Neo4j 4.1")
+      assertEquals(postJson.boolean("notify_subscribers"), false)
       val task = result.task(":zenDeskUpload")
       assertEquals(TaskOutcome.SUCCESS, task?.outcome)
     } finally {
@@ -195,7 +236,7 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
     }
   }
 
-  private fun basicZenDeskUploadBuildGradle(workspaceDir: String, server: MockWebServer): String {
+  private fun basicZenDeskUploadBuildGradle(workspaceDir: String, server: MockWebServer, notifySubscribers: Boolean = true): String {
     return """import com.neo4j.gradle.zendesk.ZenDeskUploadTask
 
 plugins {
@@ -215,6 +256,7 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
   userSegmentId = 123
   permissionGroupId = 456
   sectionId = 789
+  notifySubscribers = ${notifySubscribers}
 }"""
   }
 

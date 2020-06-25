@@ -73,6 +73,9 @@ abstract class ZenDeskUploadTask : DefaultTask() {
   @Input
   var locale: String = "en-us"
 
+  @Input
+  var notifySubscribers: Boolean = true
+
   @TaskAction
   fun task() {
     if (!userSegmentId.isPresent) {
@@ -89,6 +92,7 @@ abstract class ZenDeskUploadTask : DefaultTask() {
       userSegmentId = userSegmentId.get().toLong(),
       permissionGroupId = permissionGroupId.get().toLong(),
       sectionId = sectionId.get().toLong(),
+      notifySubscribers = notifySubscribers,
       sources = sources,
       connectionInfo = zenDeskConnectionInfo(),
       logger = logger
@@ -154,6 +158,7 @@ internal class ZenDeskUpload(val locale: String,
                              val userSegmentId: Long,
                              val permissionGroupId: Long,
                              val sectionId: Long,
+                             val notifySubscribers: Boolean,
                              val sources: MutableList<ConfigurableFileTree>,
                              val connectionInfo: ZenDeskConnectionInfo,
                              val logger: Logger) {
@@ -237,7 +242,7 @@ internal class ZenDeskUpload(val locale: String,
         }
       } else {
         logger.info("Creating a new article for slug: ${article.slug} with article: $articleData and translations: ${translationsData.filterKeys { it != "body" }}")
-        val articleId = createArticle(article.slug, mapOf("article" to articleData.plus(translationsData)))
+        val articleId = createArticle(article.slug, mapOf("article" to articleData.plus(translationsData), "notify_subscribers" to notifySubscribers))
         if (articleId != null) {
           logger.quiet("Successfully created a new article with id: $articleId and slug: ${article.slug}")
         }
