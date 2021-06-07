@@ -15,6 +15,7 @@ data class ArticleAttributes(val slug: String,
                              val tags: List<String>,
                              val position: Int = 1000000,
                              val promoted: Boolean = false,
+                             val commentsDisabled: Boolean = false,
                              val content: String)
 
 class ArticleAttributesReader(val logger: Logger) {
@@ -25,7 +26,7 @@ class ArticleAttributesReader(val logger: Logger) {
    * Get a list of documents with attributes (read from a YAML file).
    * The YAML file is generated in a pre-task.
    */
-  fun get(sources: MutableList<ConfigurableFileTree>): List<ArticleAttributes> {
+  fun get(sources: MutableList<ConfigurableFileTree>, commentsDisabled: Boolean? = null): List<ArticleAttributes> {
     return sources
       .flatten()
       .filter { it.extension == "html" }
@@ -38,7 +39,7 @@ class ArticleAttributesReader(val logger: Logger) {
           null
         } else {
           try {
-            fromFile(yamlFile, file)
+            fromFile(yamlFile, file, commentsDisabled)
           } catch (e: Exception) {
             val yamlFileAbsolutePath = yamlFile.absolutePath
             val fileName = file.name
@@ -49,16 +50,16 @@ class ArticleAttributesReader(val logger: Logger) {
       }
   }
 
-  private fun fromFile(yamlFile: File, file: File): ArticleAttributes? {
+  private fun fromFile(yamlFile: File, file: File, commentsDisabled: Boolean? = null): ArticleAttributes? {
     logger.debug("Loading $yamlFile")
     val attributes = yaml.load(FileInputStream(yamlFile)) as Map<*, *>
     val yamlFileAbsolutePath = yamlFile.absolutePath
     val fileName = file.name
     val content = file.readText(Charsets.UTF_8)
-    return fromMap(attributes, content, yamlFileAbsolutePath, fileName)
+    return fromMap(attributes, content, yamlFileAbsolutePath, fileName, commentsDisabled)
   }
 
-  internal fun fromMap(attributes: Map<*, *>, content: String, yamlFileAbsolutePath: String, fileName: String): ArticleAttributes? {
+  internal fun fromMap(attributes: Map<*, *>, content: String, yamlFileAbsolutePath: String, fileName: String, commentsDisabledDefaultValue: Boolean? = null): ArticleAttributes? {
     logger.debug("Document attributes in the YAML file: $attributes")
     val slug = getSlug(attributes, yamlFileAbsolutePath, fileName)
     val title = getTitle(attributes, yamlFileAbsolutePath, fileName)
@@ -69,7 +70,18 @@ class ArticleAttributesReader(val logger: Logger) {
       val author = getAuthor(attributes)
       val position = getPosition(attributes) ?: 1000000
       val promoted = getPromoted(attributes) ?: false
-      ArticleAttributes(slug, id, title, author, tags, position, promoted, content)
+      val commentsDisabled = getCommentsDisabled(attributes) ?: commentsDisabledDefaultValue ?: false
+      ArticleAttributes(
+        slug = slug,
+        id = id,
+        title = title,
+        author = author,
+        tags = tags,
+        position = position,
+        promoted = promoted,
+        commentsDisabled = commentsDisabled,
+        content = content
+      )
     } else {
       null
     }
@@ -102,6 +114,17 @@ class ArticleAttributesReader(val logger: Logger) {
 
   private fun getPromoted(attributes: Map<*, *>): Boolean? {
     val value = attributes["promoted"]
+    if (value is Boolean) {
+      return value
+    }
+    if (value is String) {
+      return value.toBoolean()
+    }
+    return null
+  }
+
+  private fun getCommentsDisabled(attributes: Map<*, *>): Boolean? {
+    val value = attributes["comments_disabled"]
     if (value is Boolean) {
       return value
     }
