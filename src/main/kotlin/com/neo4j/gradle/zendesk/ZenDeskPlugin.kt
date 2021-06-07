@@ -238,10 +238,9 @@ internal class ZenDeskUpload(val locale: String,
       if (existingArticle != null) {
         val currentDigest = getMetadataDigestFromHTML(existingArticle)
         val articleId = existingArticle.long("id")!!
-        val articlePromoted = existingArticle.boolean("promoted")!!
         val articleCommentsDisabled = existingArticle.boolean("comments_disabled")!!
-        // REMIND: we should add promoted and comments_disabled in the digest but the trick is that it will update every articles (since we didn't have them initially!)
-        if (currentDigest == digest && articlePromoted == article.promoted && articleCommentsDisabled == article.commentsDisabled) {
+        // REMIND: we should only compare digest, see #computeDigest for explanation!
+        if (currentDigest == digest && articleCommentsDisabled == article.commentsDisabled) {
           logger.quiet("Skipping article with id: $articleId and slug: ${article.slug}, content has not changed")
         } else {
           logger.info("Updating article id: $articleId and slug: ${article.slug} with article: $articleData and translations: ${translationsData.filterKeys { it != "body" }}")
@@ -326,7 +325,8 @@ internal class ZenDeskUpload(val locale: String,
   }
 
   private fun computeDigest(articleData: MutableMap<String, Any>, article: ArticleAttributes): String {
-    val data = klaxon.toJsonString(articleData + mapOf(
+    // REMIND: we should compute digest including "comments_disabled" but the trick is that it would change every article digests (since we didn't have it initially!)
+    val data = klaxon.toJsonString(articleData.filter { it.key != "comments_disabled" } + mapOf(
       "title" to article.title,
       "content" to article.content,
       "user_segment_id" to userSegmentId,

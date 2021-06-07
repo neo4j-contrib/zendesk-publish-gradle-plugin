@@ -107,7 +107,7 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
         """<section>
   <h2>Introduction to Neo4j 4.0</h2>
 </section>
-<!-- METADATA! {"slug":"00-intro-neo4j-about","digest":"5fa88c95ef96082130375a64836a2bf4"} !METADATA -->""",
+<!-- METADATA! {"slug":"00-intro-neo4j-about","digest":"d2987a9f064fa2a1416adc87a3c1c6f1"} !METADATA -->""",
         article["body"] as String
       )
       val task = result.task(":zenDeskUpload")
@@ -205,7 +205,7 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
         """<section>
   <h2>Neo4j 3.5.4 Patch Released ( April 6, 2019 )</h2>
 </section>
-<!-- METADATA! {"slug":"neo4j-3-5-4-patch-released","digest":"8d958b15c3e277481363e84db855294f"} !METADATA -->""",
+<!-- METADATA! {"slug":"neo4j-3-5-4-patch-released","digest":"2d310dc2b66f0e7dcd87dbd36591e33a"} !METADATA -->""",
         putTranslationJson.string("body")
       )
       assertEquals(123, putTranslationJson.int("user_segment_id"))
