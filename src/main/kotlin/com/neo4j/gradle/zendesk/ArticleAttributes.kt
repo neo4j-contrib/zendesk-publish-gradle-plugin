@@ -105,6 +105,9 @@ class ArticleAttributesReader(val logger: Logger) {
     if (value is Boolean) {
       return value
     }
+    if (value is String) {
+      return value.toBoolean()
+    }
     return null
   }
 
