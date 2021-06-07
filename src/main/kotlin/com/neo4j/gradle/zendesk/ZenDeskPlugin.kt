@@ -76,6 +76,10 @@ abstract class ZenDeskUploadTask : DefaultTask() {
   @Input
   var notifySubscribers: Boolean = true
 
+  @Input
+  @Optional
+  var commentsDisabled: Boolean? = null
+
   @TaskAction
   fun task() {
     if (!userSegmentId.isPresent) {
@@ -93,6 +97,7 @@ abstract class ZenDeskUploadTask : DefaultTask() {
       permissionGroupId = permissionGroupId.get().toLong(),
       sectionId = sectionId.get().toLong(),
       notifySubscribers = notifySubscribers,
+      commentsDisabled = commentsDisabled,
       sources = sources,
       connectionInfo = zenDeskConnectionInfo(),
       logger = logger
@@ -159,6 +164,7 @@ internal class ZenDeskUpload(val locale: String,
                              val permissionGroupId: Long,
                              val sectionId: Long,
                              val notifySubscribers: Boolean,
+                             val commentsDisabled: Boolean?,
                              val sources: MutableList<ConfigurableFileTree>,
                              val connectionInfo: ZenDeskConnectionInfo,
                              val logger: Logger) {
@@ -198,7 +204,8 @@ internal class ZenDeskUpload(val locale: String,
       val articleData = mutableMapOf(
         "label_names" to article.tags,
         "position" to article.position,
-        "promoted" to article.promoted
+        "promoted" to article.promoted,
+        "comments_disabled" to article.commentsDisabled
       )
       val author = article.author
       if (author != null) {
@@ -231,7 +238,9 @@ internal class ZenDeskUpload(val locale: String,
       if (existingArticle != null) {
         val currentDigest = getMetadataDigestFromHTML(existingArticle)
         val articleId = existingArticle.long("id")!!
-        if (currentDigest == digest) {
+        val articleCommentsDisabled = existingArticle.boolean("comments_disabled")!!
+        // REMIND: we should only compare digest, see #computeDigest for explanation!
+        if (currentDigest == digest && articleCommentsDisabled == article.commentsDisabled) {
           logger.quiet("Skipping article with id: $articleId and slug: ${article.slug}, content has not changed")
         } else {
           logger.info("Updating article id: $articleId and slug: ${article.slug} with article: $articleData and translations: ${translationsData.filterKeys { it != "body" }}")
@@ -316,7 +325,8 @@ internal class ZenDeskUpload(val locale: String,
   }
 
   private fun computeDigest(articleData: MutableMap<String, Any>, article: ArticleAttributes): String {
-    val data = klaxon.toJsonString(articleData + mapOf(
+    // REMIND: we should compute digest including "comments_disabled" but the trick is that it would change every article digests (since we didn't have it initially!)
+    val data = klaxon.toJsonString(articleData.filter { it.key != "comments_disabled" } + mapOf(
       "title" to article.title,
       "content" to article.content,
       "user_segment_id" to userSegmentId,

@@ -1,7 +1,6 @@
 package com.neo4j.gradle.zendesk
 
 import com.beust.klaxon.JsonObject
-import com.beust.klaxon.Klaxon
 import okhttp3.mockwebserver.MockWebServer
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
@@ -215,7 +214,8 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
         metadataContent = yaml.dump(mapOf(
           "slug" to "a-method-to-replicate-a-causal-cluster-to-new-hardware-with-minimum-downtime",
           "title" to "A method to replicate a Causal Cluster to new hardware with minimum downtime",
-          "zendesk_id" to 115015697128
+          "zendesk_id" to 115015697128,
+          "comments_disabled" to "true"
         ))
       ))
       val workspaceDir = setupWorkspace(Workspace("content-no-change", basicZenDeskUploadBuildGradle("content-no-change", server)), testFiles)
@@ -229,6 +229,76 @@ task zenDeskUpload(type: ZenDeskUploadTask) {
       val result = runner.build()
 
       assertEquals(zenDeskMockServer.dataReceived.size, 0)
+      val task = result.task(":zenDeskUpload")
+      assertEquals(TaskOutcome.SUCCESS, task?.outcome)
+    } finally {
+      server.shutdown()
+    }
+  }
+
+  @Test
+  fun `should update an existing article when promoted has changed`() {
+    // Setup mock server to simulate ZenDesk
+    val zenDeskMockServer = ZenDeskMockServer()
+    val server = zenDeskMockServer.setup()
+    try {
+      server.start()
+      val testFiles = listOf(FileWithMetadata(
+        fileNameWithoutExtension = "test",
+        fileContent = "<p>If the opportunity arises such that you are in need of replicating your existing Causal Cluster cluster to a new hardware setup, the following can be used to allow for minimal downtime.</p>",
+        metadataContent = yaml.dump(mapOf(
+          "slug" to "a-method-to-replicate-a-causal-cluster-to-new-hardware-with-minimum-downtime",
+          "title" to "A method to replicate a Causal Cluster to new hardware with minimum downtime",
+          "zendesk_id" to 115015697128,
+          "promoted" to true
+        ))
+      ))
+      val workspaceDir = setupWorkspace(Workspace("promoted-change", basicZenDeskUploadBuildGradle("promoted-change", server)), testFiles)
+
+      // Run the build
+      val runner = GradleRunner.create()
+      runner.forwardOutput()
+      runner.withPluginClasspath()
+      runner.withArguments(":zenDeskUpload")
+      runner.withProjectDir(workspaceDir)
+      val result = runner.build()
+
+      assertEquals(zenDeskMockServer.dataReceived.size, 2)
+      val task = result.task(":zenDeskUpload")
+      assertEquals(TaskOutcome.SUCCESS, task?.outcome)
+    } finally {
+      server.shutdown()
+    }
+  }
+
+  @Test
+  fun `should update an existing article when comments_disabled has changed`() {
+    // Setup mock server to simulate ZenDesk
+    val zenDeskMockServer = ZenDeskMockServer()
+    val server = zenDeskMockServer.setup()
+    try {
+      server.start()
+      val testFiles = listOf(FileWithMetadata(
+        fileNameWithoutExtension = "test",
+        fileContent = "<p>If the opportunity arises such that you are in need of replicating your existing Causal Cluster cluster to a new hardware setup, the following can be used to allow for minimal downtime.</p>",
+        metadataContent = yaml.dump(mapOf(
+          "slug" to "a-method-to-replicate-a-causal-cluster-to-new-hardware-with-minimum-downtime",
+          "title" to "A method to replicate a Causal Cluster to new hardware with minimum downtime",
+          "zendesk_id" to 115015697128,
+          "comments_disabled" to false
+        ))
+      ))
+      val workspaceDir = setupWorkspace(Workspace("comments-disabled-change", basicZenDeskUploadBuildGradle("comments-disabled-change", server)), testFiles)
+
+      // Run the build
+      val runner = GradleRunner.create()
+      runner.forwardOutput()
+      runner.withPluginClasspath()
+      runner.withArguments(":zenDeskUpload")
+      runner.withProjectDir(workspaceDir)
+      val result = runner.build()
+
+      assertEquals(zenDeskMockServer.dataReceived.size, 2)
       val task = result.task(":zenDeskUpload")
       assertEquals(TaskOutcome.SUCCESS, task?.outcome)
     } finally {
